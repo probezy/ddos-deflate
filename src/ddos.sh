@@ -399,7 +399,15 @@ ban_incoming_and_outgoing()
         # sort by number of connections
         sort -nr | \
         # Only store connections that exceed max allowed
-        awk "{ if (\$1 >= $NO_OF_CONNECTIONS) print; }" > \
+        awk -v no_conn="$NO_OF_CONNECTIONS" -v ban_period="$BAN_PERIOD" -v no_conn_mid="$NO_OF_CONNECTIONS_MID" -v ban_period_mid="$BAN_PERIOD_MID" -v no_conn_max="$NO_OF_CONNECTIONS_MAX" -v ban_period_max="$BAN_PERIOD_MAX" -v port="" '{ 
+              if ($1 >= no_conn_max) {
+		   print $1 " " $2 " " port " " ban_period_max;
+	      } else if ($1 >= no_conn_mid) {
+		   print $1 " " $2 " " port " " ban_period_mid;	
+	      } else if ($1 >= no_conn) {
+                   print $1 " " $2 " " port " " ban_period;
+	      }
+}' > \
         "$1"
 }
 
@@ -700,7 +708,7 @@ check_connections_cloudflare()
     if [ "$IP_BAN_NOW" -eq 1 ]; then
         if [ -n "$EMAIL_TO" ]; then
             dt=$(date)
-            hn=$(hostname)
+            hn=$HOSTNAME
             cat "$BANNED_IP_MAIL" | mail -s "[$hn] Cloudflare IP addresses banned on $dt" $EMAIL_TO
         fi
 
@@ -779,7 +787,7 @@ check_connections()
 
         IP_BAN_NOW=1
 
-        echo "${CURR_LINE_IP}${CURR_PORT} with $CURR_LINE_CONN connections" >> "$BANNED_IP_MAIL"
+        echo "${CURR_LINE_IP}${CURR_PORT} with $CURR_LINE_CONN connections for ban period $BAN_TOTAL" >> "$BANNED_IP_MAIL"
         echo "${CURR_LINE_IP}${CURR_PORT}" >> "$BANNED_IP_LIST"
 
         current_time=$(date +"%s")
@@ -798,7 +806,7 @@ check_connections()
     if [ "$IP_BAN_NOW" -eq 1 ]; then
         if [ -n "$EMAIL_TO" ]; then
             dt=$(date)
-            hn=$(hostname)
+            hn=$HOSTNAME
             cat "$BANNED_IP_MAIL" | mail -s "[$hn] IP addresses banned on $dt" $EMAIL_TO
         fi
 
@@ -925,7 +933,7 @@ check_connections_bw()
     if [ "$ip_drop_rate" -eq 1 ]; then
         if [ -n "$EMAIL_TO" ]; then
             dt=$(date)
-            hn=$(hostname)
+            hn=$HOSTNAME
             cat "$BANNED_IP_MAIL" | mail -s "[$hn] IP addresses transfer rate limit on $dt" $EMAIL_TO
         fi
     fi
@@ -1554,7 +1562,7 @@ BANDWIDTH_CONTROL_LIMIT="1896kbit"
 BANDWIDTH_DROP_RATE="512kbit"
 BANDWIDTH_DROP_PERIOD=600
 BANDWIDTH_ONLY_INCOMING=true
-
+HOSTNAME=$(hostname)
 # Load custom settings
 load_conf
 
